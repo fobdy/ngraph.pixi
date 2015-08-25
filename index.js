@@ -37,8 +37,8 @@ module.exports = function (graph, settings) {
   var width = settings.container.clientWidth,
       height = settings.container.clientHeight;
 
-  var stage = new PIXI.Stage(settings.background, true);
-  var renderer = PIXI.autoDetectRenderer(width, height, null, false, true);
+  var stage = new PIXI.Container(settings.background, true);
+  var renderer = PIXI.autoDetectRenderer(width, height, {antialias:false});
 
   settings.container.appendChild(renderer.view);
 
@@ -195,7 +195,7 @@ module.exports = function (graph, settings) {
 
   // listen to mouse events
   var graphInput = require('./lib/graphInput');
-  graphInput(pixiGraphics, layout);
+  graphInput(pixiGraphics, layout, renderer);
 
   return pixiGraphics;
 

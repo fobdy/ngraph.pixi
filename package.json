@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "zuul -- test",
-    "start": "node_modules/.bin/browserify -s ngraph ./example/index.js > ./example/bundle.js"
+    "start": "browserify -s ngraph ./example/index.js > ./example/bundle.js"
   },
   "keywords": [
     "ngraph",
@@ -13,17 +13,19 @@
     "graph",
     "rednering"
   ],
-  "author": "Andrei Kashcha",
+  "author": {
+    "name": "Andrei Kashcha"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/anvaka/ngraph.pixi"
+    "url": "git+https://github.com/anvaka/ngraph.pixi.git"
   },
   "dependencies": {
     "ngraph.forcelayout": "0.0.16",
     "ngraph.merge": "0.0.1",
     "ngraph.physics.simulator": "0.0.10",
-    "pixi.js": "^2.2.7"
+    "pixi.js": "^3.0.7"
   },
   "devDependencies": {
     "browserify": "^9.0.3",
