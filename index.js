@@ -45,7 +45,7 @@ module.exports = function (graph, settings) {
   var stage = new PIXI.Container();
   var renderer = PIXI.autoDetectRenderer(width, height, {
     antialias: settings.antialias,
-    background: settings.background
+    backgroundColor: settings.background
   });
 
   // var renderer = new PIXI.CanvasRenderer(width, height, {
@@ -164,6 +164,16 @@ module.exports = function (graph, settings) {
     },
 
     /**
+     * This will update stage size depending on the current container size
+     */
+    refresh: function () {
+      width = settings.container.clientWidth;
+      height = settings.container.clientHeight;
+      renderer.resize(width, height);
+      stage.hitArea = new PIXI.Rectangle(0, 0, renderer.width, renderer.height);
+    },
+
+    /**
      * This callback is called by pixiGraphics when it wants to render link on
      * a screen.
      *
@@ -210,6 +220,7 @@ module.exports = function (graph, settings) {
     // like to hide them, but not sure how to do it nicely
     domContainer: renderer.view,
     graphGraphics: graphics,
+    renderer: renderer,
     stage: stage
   };
 
