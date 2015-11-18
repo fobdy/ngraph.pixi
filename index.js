@@ -9,6 +9,9 @@ module.exports = function (graph, settings) {
     // What is the background color of a graph?
     background: 0x000000,
 
+    // Use antialiasing or not
+    antialias: true,
+
     // Default physics engine settings
     physics: {
       springLength: 30,
@@ -37,8 +40,18 @@ module.exports = function (graph, settings) {
   var width = settings.container.clientWidth,
       height = settings.container.clientHeight;
 
-  var stage = new PIXI.Container(settings.background, true);
-  var renderer = PIXI.autoDetectRenderer(width, height, {antialias:false});
+  var stop = true;
+
+  var stage = new PIXI.Container();
+  var renderer = PIXI.autoDetectRenderer(width, height, {
+    antialias: settings.antialias,
+    background: settings.background
+  });
+
+  // var renderer = new PIXI.CanvasRenderer(width, height, {
+  //   antialias: settings.antialias,
+  //   background: settings.background
+  // });
 
   settings.container.appendChild(renderer.view);
 
@@ -67,7 +80,14 @@ module.exports = function (graph, settings) {
     /**
      * Allows client to start animation loop, without worrying about RAF stuff.
      */
-    run: animationLoop,
+    run: function () {
+      stop = false;
+      animationLoop();
+    },
+
+    stop: function () {
+      stop = true;
+    },
 
     /**
      * For more sophisticated clients we expose one frame rendering as part of
@@ -205,7 +225,8 @@ module.exports = function (graph, settings) {
 
   function animationLoop() {
     requestAnimationFrame(animationLoop);
-    layout.step();
+    if (!stop)
+      stop = layout.step();
     renderOneFrame();
   }
 
