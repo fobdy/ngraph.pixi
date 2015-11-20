@@ -62,6 +62,8 @@ module.exports = function (graph, settings) {
   graphics.scale.y = 1;
   stage.addChild(graphics);
 
+  var nodeSprite = drawNode();
+
   // Default callbacks to build/render nodes
   var nodeUIBuilder = defaultCreateNodeUI,
       nodeRenderer  = defaultNodeRenderer,
@@ -233,6 +235,13 @@ module.exports = function (graph, settings) {
 ///////////////////////////////////////////////////////////////////////////////
 // Public API is over
 ///////////////////////////////////////////////////////////////////////////////
+
+  function drawNode() {
+    var graph = new PIXI.Graphics();
+    graph.beginFill(0xFF3300);
+    graph.drawRect(0, 0, NODE_WIDTH, NODE_WIDTH);
+    return new PIXI.Sprite(graph.generateTexture());
+  }
 
   function animationLoop() {
     requestAnimationFrame(animationLoop);
