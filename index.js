@@ -43,6 +43,12 @@ module.exports = function (graph, settings) {
   var stop = true;
 
   var stage = new PIXI.Container();
+  var group = new PIXI.Container();
+  stage.addChild(group);
+  group.position.x = width/2;
+  group.position.y = height/2;
+  group.scale.x = 1;
+  group.scale.y = 1;
   var renderer = PIXI.autoDetectRenderer(width, height, {
     antialias: settings.antialias,
     backgroundColor: settings.background
@@ -56,13 +62,42 @@ module.exports = function (graph, settings) {
   settings.container.appendChild(renderer.view);
 
   var graphics = new PIXI.Graphics();
-  graphics.position.x = width/2;
-  graphics.position.y = height/2;
-  graphics.scale.x = 1;
-  graphics.scale.y = 1;
-  stage.addChild(graphics);
+  group.addChild(graphics);
 
-  var nodeSprite = drawNode();
+  var spriteContainer = new PIXI.ParticleContainer(15000, {
+    scale: true,
+    position: true,
+    rotation: true,
+    alpha: true,
+  });
+
+  var lineSpriteContainer = new PIXI.ParticleContainer(15000, {
+    scale: true,
+    position: true,
+    rotation: true,
+    alpha: true,
+  });
+    // var spriteContainer = new PIXI.Container();
+  // spriteContainer.position.x = width/2;
+  // spriteContainer.position.y = height/2;
+  // spriteContainer.scale.x = 1;
+  // spriteContainer.scale.y = 1;
+  group.addChild(lineSpriteContainer);
+  group.addChild(spriteContainer);
+
+  var nodeTexture = generateTexture(function (gfx) {
+    gfx.beginFill(0xFF3300);
+    // gfx.drawRect(0, 0, NODE_WIDTH, NODE_WIDTH);
+    gfx.drawCircle(0, 0, NODE_WIDTH / 2);
+  });
+
+  var DEFAULT_LINE_LENGTH = 500;
+
+  var linkTexture = generateTexture(function (gfx) {
+    gfx.lineStyle(1, 0xcccccc, 1);
+    gfx.moveTo(0, 0);
+    gfx.lineTo(DEFAULT_LINE_LENGTH, 0);
+  });
 
   // Default callbacks to build/render nodes
   var nodeUIBuilder = defaultCreateNodeUI,
@@ -72,6 +107,9 @@ module.exports = function (graph, settings) {
 
   // Storage for UI of nodes/links:
   var nodeUI = {}, linkUI = {};
+
+  var nodeSprites = {};
+  var linkSprites = {};
 
   graph.forEachNode(initNode);
   graph.forEachLink(initLink);
@@ -84,7 +122,7 @@ module.exports = function (graph, settings) {
      */
     run: function () {
       stop = false;
-      animationLoop();
+      settings.stats ? animationLoopWithStats() : animationLoop();
     },
 
     stop: function () {
@@ -172,7 +210,7 @@ module.exports = function (graph, settings) {
       width = settings.container.clientWidth;
       height = settings.container.clientHeight;
       renderer.resize(width, height);
-      stage.hitArea = new PIXI.Rectangle(0, 0, renderer.width, renderer.height);
+      group.hitArea = new PIXI.Rectangle(0, 0, renderer.width, renderer.height);
     },
 
     /**
@@ -223,12 +261,14 @@ module.exports = function (graph, settings) {
     domContainer: renderer.view,
     graphGraphics: graphics,
     renderer: renderer,
-    stage: stage
+    stage: stage,
+    group: group,
+    hideWhatIsNotVisible: hideWhatIsNotVisible
   };
 
   // listen to mouse events
   var graphInput = require('./lib/graphInput');
-  graphInput(pixiGraphics, layout, renderer);
+  graphInput(pixiGraphics);
 
   return pixiGraphics;
 
@@ -236,11 +276,10 @@ module.exports = function (graph, settings) {
 // Public API is over
 ///////////////////////////////////////////////////////////////////////////////
 
-  function drawNode() {
-    var graph = new PIXI.Graphics();
-    graph.beginFill(0xFF3300);
-    graph.drawRect(0, 0, NODE_WIDTH, NODE_WIDTH);
-    return new PIXI.Sprite(graph.generateTexture());
+  function generateTexture(rndr) {
+    var g = new PIXI.Graphics();
+    rndr(g);
+    return g.generateTexture(1, PIXI.SCALE_MODES.DEFAULT);
   }
 
   function animationLoop() {
@@ -250,8 +289,17 @@ module.exports = function (graph, settings) {
     renderOneFrame();
   }
 
+  function animationLoopWithStats() {
+    settings.stats.begin();
+    renderOneFrame();
+    settings.stats.end();
+    if (!stop)
+      stop = layout.step();
+    requestAnimationFrame(animationLoopWithStats);
+  }
+
   function renderOneFrame() {
-    graphics.clear();
+    // graphics.clear();
 
     Object.keys(linkUI).forEach(renderLink);
     Object.keys(nodeUI).forEach(renderNode);
@@ -260,11 +308,11 @@ module.exports = function (graph, settings) {
   }
 
   function renderLink(linkId) {
-    linkRenderer(linkUI[linkId], graphics);
+    linkRenderer(linkUI[linkId], graphics, linkId);
   }
 
   function renderNode(nodeId) {
-    nodeRenderer(nodeUI[nodeId], graphics);
+    nodeRenderer(nodeUI[nodeId], graphics, nodeId);
   }
 
   function initNode(node) {
@@ -273,6 +321,8 @@ module.exports = function (graph, settings) {
     ui.pos = layout.getNodePosition(node.id);
     // and store for subsequent use:
     nodeUI[node.id] = ui;
+    nodeSprites[node.id] = new PIXI.Sprite(nodeTexture);
+    spriteContainer.addChild(nodeSprites[node.id]);
   }
 
   function initLink(link) {
@@ -280,6 +330,8 @@ module.exports = function (graph, settings) {
     ui.from = layout.getNodePosition(link.fromId);
     ui.to = layout.getNodePosition(link.toId);
     linkUI[link.id] = ui;
+    linkSprites[link.id] = new PIXI.Sprite(linkTexture);
+    lineSpriteContainer.addChild(linkSprites[link.id]);
   }
 
   function defaultCreateNodeUI() {
@@ -290,19 +342,48 @@ module.exports = function (graph, settings) {
     return {};
   }
 
-  function defaultNodeRenderer(node) {
+  function defaultNodeRenderer(node, gfx, nodeId) {
     var x = node.pos.x - NODE_WIDTH/2,
         y = node.pos.y - NODE_WIDTH/2;
 
-    graphics.beginFill(0xFF3300);
-    graphics.drawRect(x, y, NODE_WIDTH, NODE_WIDTH);
+    // graphics.beginFill(0xFF3300);
+    // graphics.drawRect(x, y, NODE_WIDTH, NODE_WIDTH);
+    nodeSprites[nodeId].position.x = x;
+    nodeSprites[nodeId].position.y = y;
   }
 
-  function defaultLinkRenderer(link) {
-    graphics.lineStyle(1, 0xcccccc, 1);
-    graphics.moveTo(link.from.x, link.from.y);
-    graphics.lineTo(link.to.x, link.to.y);
+  function hideWhatIsNotVisible(bbox) {
+    var counter = 0;
+    var total = spriteContainer.children.length;
+    spriteContainer.children.forEach(function (sprite) {
+      var pos = sprite.toGlobal(stage.position);
+      if (pos.x > bbox.width || pos.y > bbox.height || pos.x < bbox.x || pos.y < bbox.y)
+        sprite.visible = false;
+      else
+        sprite.visible = true;
+    });
   }
+
+  function defaultLinkRenderer(link, gfx, linkId) {
+    var dy = link.to.y - link.from.y;
+    var dx = link.to.x - link.from.x;
+    var angle = Math.atan2(dy, dx);
+    var dist = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+    var lsp = linkSprites[linkId];
+    lsp.scale.x = dist / DEFAULT_LINE_LENGTH;
+    lsp.scale.y = 1.0;
+    lsp.rotation = angle;
+    lsp.position.x = link.from.x;
+    lsp.position.y = link.from.y;
+    // linkSprites[linkId].position.x = x;
+    // linkSprites[linkId].position.y = y;
+  }
+
+  // function defaultLinkRenderer(link) {
+  //   graphics.lineStyle(1, 0xcccccc, 1);
+  //   graphics.moveTo(link.from.x, link.from.y);
+  //   graphics.lineTo(link.to.x, link.to.y);
+  // }
 
   function getNodeAt(x, y) {
     var half = NODE_WIDTH/2;
