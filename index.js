@@ -32,9 +32,9 @@ module.exports = function (graph, settings) {
 
   if (!layout) {
     var createLayout = require('ngraph.forcelayout'),
-        physics = require('ngraph.physics.simulator');
+        // physics = require('ngraph.physics.simulator');
 
-    layout = createLayout(graph, physics(settings.physics));
+    layout = createLayout(graph, settings.physics);
   }
 
   var width = settings.container.clientWidth,
@@ -45,10 +45,10 @@ module.exports = function (graph, settings) {
   var stage = new PIXI.Container();
   var group = new PIXI.Container();
   stage.addChild(group);
-  group.position.x = width/2;
-  group.position.y = height/2;
-  group.scale.x = 1;
-  group.scale.y = 1;
+  // group.position.x = width/2;
+  // group.position.y = height/2;
+  // group.scale.x = 1;
+  // group.scale.y = 1;
   var renderer = PIXI.autoDetectRenderer(width, height, {
     antialias: settings.antialias,
     backgroundColor: settings.background
@@ -268,7 +268,10 @@ module.exports = function (graph, settings) {
 
   // listen to mouse events
   var graphInput = require('./lib/graphInput');
-  graphInput(pixiGraphics);
+  var zoom = graphInput(pixiGraphics);
+  zoom.scale(0.5);
+  zoom.translate([width/2.5, height/2.5]);
+  zoom.event(d3.transition().duration(750));
 
   return pixiGraphics;
 
